@@ -15,39 +15,9 @@ limitations under the License.
 */
 package net.ucanaccess.converters;
 
-import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
-import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.SQLSyntaxErrorException;
-import java.sql.SQLWarning;
-import java.sql.Statement;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import com.healthmarketscience.jackcess.Column;
-import com.healthmarketscience.jackcess.DataType;
-import com.healthmarketscience.jackcess.Database;
+import com.healthmarketscience.jackcess.*;
 import com.healthmarketscience.jackcess.Database.FileFormat;
-import com.healthmarketscience.jackcess.Index;
-import com.healthmarketscience.jackcess.PropertyMap;
 import com.healthmarketscience.jackcess.PropertyMap.Property;
-import com.healthmarketscience.jackcess.Row;
-import com.healthmarketscience.jackcess.Table;
 import com.healthmarketscience.jackcess.complex.ComplexValueForeignKey;
 import com.healthmarketscience.jackcess.impl.ColumnImpl;
 import com.healthmarketscience.jackcess.impl.ColumnImpl.AutoNumberGenerator;
@@ -56,9 +26,6 @@ import com.healthmarketscience.jackcess.impl.IndexImpl;
 import com.healthmarketscience.jackcess.impl.query.QueryFormat;
 import com.healthmarketscience.jackcess.impl.query.QueryImpl;
 import com.healthmarketscience.jackcess.query.Query;
-
-import org.hsqldb.error.ErrorCode;
-
 import net.ucanaccess.complex.ComplexBase;
 import net.ucanaccess.converters.TypesMap.AccessType;
 import net.ucanaccess.ext.FunctionType;
@@ -67,6 +34,17 @@ import net.ucanaccess.jdbc.DBReference;
 import net.ucanaccess.jdbc.UcanaccessSQLException;
 import net.ucanaccess.util.Logger;
 import net.ucanaccess.util.Logger.Messages;
+import org.hsqldb.error.ErrorCode;
+
+import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.math.BigDecimal;
+import java.sql.*;
+import java.util.Date;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class LoadJet {
     private static int namingCounter = 0;
@@ -197,9 +175,9 @@ public class LoadJet {
         }
 
         private void createSwitch() throws SQLException {
-            DataType[] dtypes = new DataType[] { DataType.BINARY, DataType.BOOLEAN, DataType.SHORT_DATE_TIME,
+            DataType[] dtypes = new DataType[]{DataType.BINARY, DataType.BOOLEAN, DataType.SHORT_DATE_TIME,
                     DataType.INT, DataType.LONG, DataType.DOUBLE, DataType.MONEY, DataType.NUMERIC,
-                    DataType.COMPLEX_TYPE, DataType.MEMO };
+                    DataType.COMPLEX_TYPE, DataType.MEMO};
             for (DataType dtype : dtypes) {
                 String type = " " + TypesMap.map2hsqldb(dtype) + " ";
 
@@ -259,18 +237,18 @@ public class LoadJet {
     }
 
     private final class TablesLoader {
-        private static final int    HSQL_FK_ALREADY_EXISTS   = -ErrorCode.X_42528;      // -5528;
-        private static final int    HSQL_UK_ALREADY_EXISTS   = -ErrorCode.X_42522;      // -5522
-        private static final int    HSQL_NOT_NULL            = -ErrorCode.X_23502;
-        private static final int    HSQL_FK_VIOLATION        = -ErrorCode.X_23503;
-        private static final int    HSQL_UK_VIOLATION        = -ErrorCode.X_23505;
-        private static final String SYSTEM_SCHEMA            = "SYS";
-        private static final int    DEFAULT_STEP             = 2000;
-        private List<String>        unresolvedTables         = new ArrayList<String>();
-        private List<String>        calculatedFieldsTriggers = new ArrayList<String>();
-        private LinkedList<String>  loadingOrder             = new LinkedList<String>();
-        private Set<Column>         alreadyIndexed           = new HashSet<Column>();
-        private Set<String>         readOnlyTables           = new HashSet<String>();
+        private static final int HSQL_FK_ALREADY_EXISTS = -ErrorCode.X_42528;      // -5528;
+        private static final int HSQL_UK_ALREADY_EXISTS = -ErrorCode.X_42522;      // -5522
+        private static final int HSQL_NOT_NULL = -ErrorCode.X_23502;
+        private static final int HSQL_FK_VIOLATION = -ErrorCode.X_23503;
+        private static final int HSQL_UK_VIOLATION = -ErrorCode.X_23505;
+        private static final String SYSTEM_SCHEMA = "SYS";
+        private static final int DEFAULT_STEP = 2000;
+        private List<String> unresolvedTables = new ArrayList<String>();
+        private List<String> calculatedFieldsTriggers = new ArrayList<String>();
+        private LinkedList<String> loadingOrder = new LinkedList<String>();
+        private Set<Column> alreadyIndexed = new HashSet<Column>();
+        private Set<String> readOnlyTables = new HashSet<String>();
 
         private String commaSeparated(List<? extends Index.Column> columns, boolean escape) throws SQLException {
             String comma = "";
@@ -344,13 +322,13 @@ public class LoadJet {
             String ecl = procedureEscapingIdentifier(cl.getName()).replace("%", "%%");
             String trg = isCreate
                     ? "CREATE TRIGGER expr%d before insert ON " + ntn + " REFERENCING NEW  AS newrow  FOR EACH ROW "
-                            + " BEGIN  ATOMIC " + " SET newrow." + ecl + " = " + call + "; END "
+                    + " BEGIN  ATOMIC " + " SET newrow." + ecl + " = " + call + "; END "
                     : "CREATE TRIGGER expr%d before update ON " + ntn
-                            + " REFERENCING NEW  AS newrow OLD AS OLDROW FOR EACH ROW " + " BEGIN  ATOMIC IF %s THEN "
-                            + " SET newrow." + ecl + " = " + call + "; ELSEIF newrow." + ecl + " <> oldrow." + ecl
-                            + " THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '"
-                            + Logger.getMessage(Messages.TRIGGER_UPDATE_CF_ERR.name()) + cl.getName().replace("%", "%%")
-                            + "'" + ";  END IF ; END ";
+                    + " REFERENCING NEW  AS newrow OLD AS OLDROW FOR EACH ROW " + " BEGIN  ATOMIC IF %s THEN "
+                    + " SET newrow." + ecl + " = " + call + "; ELSEIF newrow." + ecl + " <> oldrow." + ecl
+                    + " THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = '"
+                    + Logger.getMessage(Messages.TRIGGER_UPDATE_CF_ERR.name()) + cl.getName().replace("%", "%%")
+                    + "'" + ";  END IF ; END ";
 
             return trg;
         }
@@ -768,17 +746,17 @@ public class LoadJet {
                 throws SQLException, IOException {
             String type = "";
             switch (errorCode) {
-            case HSQL_FK_VIOLATION:
-                type = "Foreign Key";
-                break;
-            case HSQL_NOT_NULL:
-                type = "Not Null";
-                break;
-            case HSQL_UK_VIOLATION:
-                type = "Unique";
-                break;
-            default:
-                break;
+                case HSQL_FK_VIOLATION:
+                    type = "Foreign Key";
+                    break;
+                case HSQL_NOT_NULL:
+                    type = "Not Null";
+                    break;
+                case HSQL_UK_VIOLATION:
+                    type = "Unique";
+                    break;
+                default:
+                    break;
             }
             Logger.logParametricWarning(Messages.CONSTRAINT, type, t.getName(), record.toString(), t.getName());
 
@@ -813,7 +791,7 @@ public class LoadJet {
             }
             return false;
         }
-        
+
         private void loadTableData(Table t, boolean systemTable) throws IOException, SQLException {
             loadTableData(t, systemTable, false);
         }
@@ -837,7 +815,8 @@ public class LoadJet {
                     for (Map.Entry<String, Object> entry : row.entrySet()) {
                         values.add(value(entry.getValue(), t, entry.getKey(), row));
                     }
-                    execInsert(ps, values);
+
+                    execInsert(ps, values, i);
 
                     if (errorCheck || (i > 0 && i % step == 0) || !it.hasNext()) {
                         try {
@@ -947,6 +926,7 @@ public class LoadJet {
                     t2 = dbIO.getTable(tn);
                     t = new UcanaccessTable(t2, tn);
                 } catch (Exception e) {
+                    e.printStackTrace();
                     Logger.logWarning(e.getMessage());
                     this.unresolvedTables.add(tn);
                 }
@@ -1121,7 +1101,7 @@ public class LoadJet {
                     return bk.getBytes();
                 }
             }
-            
+
             if (value instanceof Byte) {
                 return SQLConverter.asUnsigned((Byte) value);
             }
@@ -1165,11 +1145,11 @@ public class LoadJet {
     }
 
     private final class ViewsLoader {
-        private Map<String, String> notLoaded             = new HashMap<String, String>();
-        private Map<String, String> notLoadedProcedure    = new HashMap<String, String>();
-        private static final int    OBJECT_ALREADY_EXISTS = -ErrorCode.X_42504;
-        private static final int    OBJECT_NOT_FOUND      = -ErrorCode.X_42501;
-        private static final int    UNEXPECTED_TOKEN      = -ErrorCode.X_42581;
+        private Map<String, String> notLoaded = new HashMap<String, String>();
+        private Map<String, String> notLoadedProcedure = new HashMap<String, String>();
+        private static final int OBJECT_ALREADY_EXISTS = -ErrorCode.X_42504;
+        private static final int OBJECT_NOT_FOUND = -ErrorCode.X_42501;
+        private static final int UNEXPECTED_TOKEN = -ErrorCode.X_42581;
 
         private boolean loadView(Query q) throws SQLException {
             return loadView(q, null);
@@ -1421,22 +1401,22 @@ public class LoadJet {
         }
     }
 
-    private Connection      conn;
-    private Database        dbIO;
-    private boolean         err;
-    private FunctionsLoader functionsLoader   = new FunctionsLoader();
-    private List<String>    loadedIndexes     = new ArrayList<String>();
-    private List<String>    loadedQueries     = new ArrayList<String>();
-    private List<String>    loadedProcedures  = new ArrayList<String>();
-    private List<String>    loadedTables      = new ArrayList<String>();
-    private LogsFlusher     logsFlusher       = new LogsFlusher();
-    private TablesLoader    tablesLoader      = new TablesLoader();
-    private TriggersLoader  triggersGenerator = new TriggersLoader();
-    private ViewsLoader     viewsLoader       = new ViewsLoader();
-    private boolean         sysSchema;
-    private boolean         ff1997;
-    private boolean         skipIndexes;
-    private Metadata        metadata;
+    private Connection conn;
+    private Database dbIO;
+    private boolean err;
+    private FunctionsLoader functionsLoader = new FunctionsLoader();
+    private List<String> loadedIndexes = new ArrayList<String>();
+    private List<String> loadedQueries = new ArrayList<String>();
+    private List<String> loadedProcedures = new ArrayList<String>();
+    private List<String> loadedTables = new ArrayList<String>();
+    private LogsFlusher logsFlusher = new LogsFlusher();
+    private TablesLoader tablesLoader = new TablesLoader();
+    private TriggersLoader triggersGenerator = new TriggersLoader();
+    private ViewsLoader viewsLoader = new ViewsLoader();
+    private boolean sysSchema;
+    private boolean ff1997;
+    private boolean skipIndexes;
+    private Metadata metadata;
 
     public LoadJet(Connection _conn, Database _dbIo) throws SQLException {
         this.conn = _conn;
@@ -1500,10 +1480,14 @@ public class LoadJet {
         }
     }
 
-    private void execInsert(PreparedStatement st, List<Object> values) throws SQLException {
+    private void execInsert(PreparedStatement st, List<Object> values, int rowIndex) throws SQLException {
         int i = 1;
         for (Object value : values) {
-            st.setObject(i++, value);
+            try {
+                st.setObject(i++, value);
+            } catch (SQLDataException e) {
+                Logger.logWarning("Load row=" + rowIndex + " column=" + i + " value=" + value + " is error:" + e.getMessage());
+            }
         }
         // st.execute();
         st.addBatch();
