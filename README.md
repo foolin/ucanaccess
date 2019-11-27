@@ -10,6 +10,9 @@ For more information on how to use UCanAccess, see the [web site](http://ucanacc
 UCanAccess is licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0).
 
 
---
-[Why Fork?](fork.md)
+---
+
+## Why Fork?
+
+Fixed some bug. detail see [fork.md](fork.md)
 
